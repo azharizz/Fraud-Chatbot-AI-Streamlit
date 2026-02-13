@@ -1,0 +1,23 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+data/processed/
+data/raw/*.csv
+data/raw/*.zip
+data/raw/*.pdf
+.DS_Store
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.streamlit/secrets.toml
+.internal/
+fraudTrain.csv
+fraudTest.csv
+fraudTrain.csv.zip
+fraudTest.csv.zip
+Bhatla.pdf
+EBA_ECB 2024 Report on Payment Fraud.pdf
+.pytest_cache/
