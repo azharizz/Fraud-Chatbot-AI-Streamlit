@@ -1,15 +1,15 @@
+"""Agent-related data models: dependencies and structured responses."""
+
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
+import duckdb
+import faiss
+from openai import OpenAI
 from pydantic import BaseModel, ConfigDict
 
 from src.models.source_type import SourceType
-
-if TYPE_CHECKING:
-    import duckdb
-    import faiss
-    from openai import OpenAI
 
 
 class AgentDeps(BaseModel):
