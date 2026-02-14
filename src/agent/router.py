@@ -96,6 +96,30 @@ class FraudRouter:
 
         return a
 
+    def _sql_is_unanswerable(self, sql: SQLToolResult | None) -> bool:
+        """Check if SQL returned an UNANSWERABLE result."""
+        if not sql or not sql.success:
+            return False
+        if sql.rows and len(sql.rows) == 1:
+            first_row = sql.rows[0]
+            values = [str(v).upper() for v in first_row.values()]
+            return any("UNANSWERABLE" in v for v in values)
+        return False
+
+    def _fallback_to_rag(self, question: str, deps: AgentDeps) -> RAGToolResult | None:
+        """Invoke the RAG tool as a fallback when SQL can't answer."""
+        logger.info("SQL returned UNANSWERABLE; falling back to RAG for: %s", question)
+        try:
+            rag_result = self._rag_tool.run(
+                question=question,
+                client=deps.openai_client,
+            )
+            deps.tool_outputs["rag"] = rag_result
+            return rag_result
+        except Exception as e:
+            logger.error("RAG fallback failed: %s", e, exc_info=True)
+            return None
+
     async def run(
         self,
         question: str,
@@ -117,6 +141,14 @@ class FraudRouter:
 
             sql = deps.tool_outputs.get("sql")
             rag = deps.tool_outputs.get("rag")
+
+            # Fallback: if SQL returned UNANSWERABLE and RAG wasn't called,
+            # automatically invoke RAG since the answer may exist in documents
+            if self._sql_is_unanswerable(sql) and rag is None:
+                rag = self._fallback_to_rag(question, deps)
+                if rag and rag.success and rag.answer:
+                    answer = rag.answer
+
             source_type = self._infer_source_type(sql, rag)
 
             if enable_synthesis and source_type == SourceType.BOTH and sql and rag:
@@ -155,6 +187,14 @@ class FraudRouter:
 
             sql = deps.tool_outputs.get("sql")
             rag = deps.tool_outputs.get("rag")
+
+            # Fallback: if SQL returned UNANSWERABLE and RAG wasn't called,
+            # automatically invoke RAG since the answer may exist in documents
+            if self._sql_is_unanswerable(sql) and rag is None:
+                rag = self._fallback_to_rag(question, deps)
+                if rag and rag.success and rag.answer:
+                    full_text = rag.answer
+
             source_type = self._infer_source_type(sql, rag)
 
             if enable_synthesis and source_type == SourceType.BOTH and sql and rag:
